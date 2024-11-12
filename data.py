@@ -12,7 +12,7 @@ def charger_donnees(fichier_path):
     """
     try:
         # Charger le fichier avec un délimiteur tabulation, en désactivant le mode de faible mémoire
-        data = pd.read_csv(fichier_path, delimiter='\t', encoding='utf-8', low_memory=False)
+        data = pd.read_csv(fichier_path, delimiter='\t', encoding='utf-8', low_memory=True)
         
         # Forcer les colonnes pertinentes à être de type float pour éviter les erreurs
         cols_to_convert = ['L POR X [px]', 'L POR Y [px]', 'R POR X [px]', 'R POR Y [px]', 'Time']
