@@ -5,6 +5,7 @@ def main():
     # Charger les données de point de regard
     fichier_donnees = 'assets/Test Your Awareness eyes data.txt'
     data = charger_donnees(fichier_donnees)
+    print(data)
 
     if data is None:
         print("Erreur lors du chargement des données. Vérifiez le fichier et réessayez.")
