@@ -35,7 +35,7 @@ def initialiser_enregistrement(output_path, fps, frame_width, frame_height):
     return cv2.VideoWriter(output_path, cv2.VideoWriter_fourcc(*'XVID'), fps, (frame_width, frame_height))
 
 
-def ajouter_point_de_regard(frame, x, y):
+def ajouter_point_de_regard(frame, lx, ly, rx, ry):
     """
     Ajoute un cercle rouge de taille plus grande représentant le point de regard sur une frame.
     
@@ -48,6 +48,7 @@ def ajouter_point_de_regard(frame, x, y):
     - frame (ndarray): Frame avec le point de regard superposé.
     """
     # Couleur rouge (BGR: bleu, vert, rouge) et rayon plus grand
-    cv2.circle(frame, (x, y), radius=100, color=(0, 0, 255), thickness=-1)  # rouge (0, 0, 255)
+    cv2.circle(frame, (rx, ry), radius=50, color=(0, 0, 255), thickness=-1)  # rouge (0, 0, 255)
+    cv2.circle(frame, (lx, ly), radius=50, color=(255, 0, 0), thickness=-1)  # rouge (0, 0, 255)
     return frame
 
