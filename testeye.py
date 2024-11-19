@@ -4,12 +4,9 @@ import pandas as pd
 # Chemin des fichiers
 video_path = "assets/Test Your Awareness.avi"
 data_path = "assets/DataPOR.csv"
+output_path = "assets/Output_Video_With_Points.avi"  # Nom du fichier de sortie
 
 # Coordonnées du point rouge
-point_x = 480  # Exemple, à ajuster
-point_y = 360  # Exemple, à ajuster
-
-# Couleur et taille du point
 point_color = (0, 0, 255)  # Rouge en BGR
 point_radius = 5  # Rayon du point
 point_thickness = -1  # -1 pour un cercle plein
@@ -17,72 +14,60 @@ point_thickness = -1  # -1 pour un cercle plein
 # Charger la vidéo
 cap = cv2.VideoCapture(video_path)
 
-# hauteur et largeur du fichier vidéo en px 
-height = cap.get(cv2.CAP_PROP_FRAME_HEIGHT)
-width = cap.get(cv2.CAP_PROP_FRAME_WIDTH)
-# Affichage de la résolution du fichier vidéo
-print(f"resolution {width} x {height}")
+# Obtenir les propriétés de la vidéo
+height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+fps = int(cap.get(cv2.CAP_PROP_FPS))
+frame_count = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
 
-# Nombre d'images par seconde du fichier vidéo
-fps = cap.get(cv2.CAP_PROP_FPS)
-# Affichage du nombre d'images par seconde du fichier vidéo
+# Affichage des propriétés
+print(f"Résolution : {width} x {height}")
 print(f"{fps} images/seconde")
+print(f"Nombre total de frames : {frame_count}")
 
-# Nombre d'images au total et durée de la vidéo
-frame_count = cap.get(cv2.CAP_PROP_FRAME_COUNT)
-duration = frame_count/fps
-# Affichage de la durée et du nombre de frame
-print(f"{duration} secondes")
-print(f"nombre de frames de la video : {frame_count}")
-
-# Charger le fichier avec un délimiteur tabulation, en désactivant le mode de faible mémoire
+# Charger le fichier CSV avec un délimiteur tabulation
 data = pd.read_csv(data_path, delimiter='\t', encoding='utf-8', low_memory=False)
-# Nombre de lignes totales du fichier DataPOR
-row_count = len(data)
-print(f"nombre de lignes csv : {row_count}")
 
-# Colonnes X et Y de l'oeil gauche sauf la première ligne car elle est NaN
-eye_data = data.loc[1:,["L POR X [px]", "L POR Y [px]"]]
+# Extraire les colonnes des coordonnées X et Y de l'œil gauche
+eye_data = data.loc[1:, ["L POR X [px]", "L POR Y [px]"]]
 start_row = 0
 end_row = len(eye_data)
-# Affichage des datas des colonnes
-print(eye_data)
-print(f"Nombre de colonnes a traiter {end_row}")
-print(f"premiere ligne de L POR X :{eye_data.iloc[0,0]}")
+increment = end_row / frame_count  # Nombre de lignes à sauter pour chaque frame
 
-# Nombre de lignes à sauter pour avoir le numéro de la prochaine ligne à traiter
-increment = end_row/frame_count
-print(f"Ajouter : {increment} pour connaitre la prochaine ligne a traiter")
-
-# Vérifier si la vidéo s'ouvre correctement
+# Vérification si la vidéo s'ouvre correctement
 if not cap.isOpened():
     print("Erreur : Impossible de charger la vidéo.")
     exit()
 
-# Lire et afficher les frames
+# Initialiser l'écrivain vidéo
+fourcc = cv2.VideoWriter_fourcc(*'XVID')  # Codec pour AVI
+out = cv2.VideoWriter(output_path, fourcc, fps, (width, height))
+
+# Lire et traiter les frames
 while True:
     ret, frame = cap.read()
-
     if not ret:
         break  # Fin de la vidéo
 
-    # Les coordonnées X et Y de l'oeil
-    eye_x = int(float((eye_data.iloc[int(start_row),0])) / 1920 * 980)
-    eye_y = int(float((eye_data.iloc[int(start_row),1])) / 1080 * 720)
-    #print(f"x = {eye_x} et y = {eye_y}")
+    # Calculer les coordonnées X et Y de l'œil
+    if int(start_row) < end_row:
+        eye_x = int(float(eye_data.iloc[int(start_row), 0]) / 1920 * width)
+        eye_y = int(float(eye_data.iloc[int(start_row), 1]) / 1080 * height)
+    else:
+        eye_x, eye_y = -1, -1  # Valeurs invalides si les données sont épuisées
 
-    # Dessiner le point sur la frame
-    cv2.circle(frame, (eye_x, eye_y), point_radius, point_color, point_thickness)
+    # Dessiner le point uniquement si les coordonnées sont valides
+    if 0 <= eye_x < width and 0 <= eye_y < height:
+        cv2.circle(frame, (eye_x, eye_y), point_radius, point_color, point_thickness)
 
-    # Afficher la frame
-    cv2.imshow("Video avec point rouge", frame)
-
-    # Quitter si 'q' est pressé
-    if cv2.waitKey(int(fps)) & 0xFF == ord('p'):
-        break
+    # Écrire la frame dans le fichier de sortie
+    out.write(frame)
 
     start_row += increment
 
 # Libérer les ressources
 cap.release()
+out.release()
 cv2.destroyAllWindows()
+
+print(f"Vidéo traitée enregistrée sous : {output_path}")
