@@ -1,5 +1,6 @@
 import cv2
 import pandas as pd
+import numpy as np
 
 # Chemin des fichiers
 video_path = "assets/Test Your Awareness.avi"
@@ -9,10 +10,11 @@ output_path = "assets/Output_Video_With_Points.avi"  # Nom du fichier de sortie
 # Couleur et taille du point
 point_color = (0, 0, 255)  # Rouge en BGR
 point_radius = 30  # Rayon du point
-point_thickness = 5  # -1 pour un cercle plein
+point_thickness = -1  # Cercle plein
 
 # Lissage des mouvements
-alpha = 0.3  # Facteur de pondération pour le lissage (0.0 = aucune transition, 1.0 = rapide)
+alpha = 0.25  # Facteur de pondération pour le lissage (0.0 = aucune transition, 1.0 = rapide)
+window_size = 10  # Taille de la fenêtre pour le filtre de lissage gaussien (frames)
 
 # Charger la vidéo
 cap = cv2.VideoCapture(video_path)
@@ -36,6 +38,7 @@ out = cv2.VideoWriter(output_path, fourcc, fps, (width, height))
 
 # Variables pour le lissage
 smoothed_x, smoothed_y = width // 2, height // 2  # Initialisation au centre
+positions = []  # Historique des positions pour le filtre gaussien
 
 # Lire et traiter les frames
 while True:
@@ -50,14 +53,22 @@ while True:
     else:
         raw_x, raw_y = smoothed_x, smoothed_y  # Si données épuisées, rester sur la position précédente
 
-    # Lissage des coordonnées
-    smoothed_x = int(alpha * raw_x + (1 - alpha) * smoothed_x)
-    smoothed_y = int(alpha * raw_y + (1 - alpha) * smoothed_y)
+    # Ajout de la position dans l'historique
+    positions.append((raw_x, raw_y))
+    if len(positions) > window_size:
+        positions.pop(0)
+
+    # Application d'un filtre gaussien sur les positions
+    if len(positions) > 1:
+        gaussian_weights = np.exp(-np.linspace(-(len(positions) - 1) / 2, (len(positions) - 1) / 2, len(positions))**2)
+        gaussian_weights /= gaussian_weights.sum()
+        smoothed_x = int(np.dot([pos[0] for pos in positions], gaussian_weights))
+        smoothed_y = int(np.dot([pos[1] for pos in positions], gaussian_weights))
+    else:
+        smoothed_x, smoothed_y = int(raw_x), int(raw_y)
 
     # Dessiner le point seulement si les coordonnées sont valides
     if 0 <= smoothed_x < width and 0 <= smoothed_y < height:
-        #cv2.circle(frame, (smoothed_x, smoothed_y), point_radius, point_color, point_thickness)
-
         # Créer un masque de la même taille que la vidéo
         mask = frame.copy()
         mask[:] = 0  # Remplir le masque avec du noir
@@ -66,7 +77,7 @@ while True:
         cv2.circle(mask, (smoothed_x, smoothed_y), point_radius, point_color, point_thickness)
 
         # Appliquer un filtre gaussien sur le masque
-        mask = cv2.GaussianBlur(mask, (21, 21), 0)  # Taille du noyau et écart type ajustables
+        mask = cv2.GaussianBlur(mask, (51, 51), 20)  # Ajustez le noyau et l'écart type
 
         # Ajouter le masque à la frame d'origine
         frame = cv2.addWeighted(frame, 1.0, mask, 0.5, 0)  # Fusionner avec transparence
