@@ -12,7 +12,7 @@ point_radius = 30  # Rayon du point
 point_thickness = 5  # -1 pour un cercle plein
 
 # Lissage des mouvements
-alpha = 0.22  # Facteur de pondération pour le lissage (0.0 = aucune transition, 1.0 = rapide)
+alpha = 0.22  # Facteur de pondération pour le lissage (0.0 = lissage extrême, 1.0 = pas de lissage)
 
 # Charger la vidéo
 cap = cv2.VideoCapture(video_path)
@@ -45,8 +45,8 @@ while True:
 
     # Récupérer les coordonnées actuelles
     if int(start_row) < end_row:
-        raw_x = float(eye_data.iloc[int(start_row), 0]) / 1920 * width
-        raw_y = float(eye_data.iloc[int(start_row), 1]) / 1080 * height
+        raw_x = float(eye_data.iloc[int(start_row), 0]) / 1600 * width
+        raw_y = float(eye_data.iloc[int(start_row), 1]) / 1150 * height
     else:
         raw_x, raw_y = smoothed_x, smoothed_y  # Si données épuisées, rester sur la position précédente
 
