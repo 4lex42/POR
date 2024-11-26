@@ -12,7 +12,7 @@ point_radius = 30  # Rayon du point
 point_thickness = 5  # -1 pour un cercle plein
 
 # Lissage des mouvements
-alpha = 0.22  # Facteur de pondération pour le lissage (0.0 = lissage extrême, 1.0 = pas de lissage)
+alpha = 0.25  # Facteur de pondération pour le lissage (0.0 = lissage extrême, 1.0 = pas de lissage)
 
 # Charger la vidéo
 cap = cv2.VideoCapture(video_path)
