@@ -1,18 +1,27 @@
 import cv2
 import pandas as pd
+import numpy as np
 
 # Chemin des fichiers
 video_path = "assets/Test Your Awareness.avi"
 data_path = "assets/DataPOR.csv"
 output_path = "assets/Output_Video_With_Points.avi"  # Nom du fichier de sortie
 
-# Couleur et taille du point
-point_color = (0, 0, 255)  # Rouge en BGR
-point_radius = 30  # Rayon du point
-point_thickness = 5  # -1 pour un cercle plein
+# Résolution
+x = 1600
+y = 1050
 
-# Lissage des mouvements
-alpha = 0.22  # Facteur de pondération pour le lissage (0.0 = aucune transition, 1.0 = rapide)
+# Couleurs et tailles des points
+current_point_color = (0, 0, 255)  # Rouge pour le point actuel
+next_point_color = (0, 255, 0)  # Bleu pour le point suivant
+path_point_color = (255, 0, 0)  # Vert pour les points intermédiaires
+current_point_radius = 20  # Taille du point actuel
+next_point_radius = 15  # Taille du point suivant
+path_point_radius = 15  # Taille des points intermédiaires
+point_thickness = -1
+
+# Propriétés de l'interpolation
+num_path_points = 10  # Nombre de points intermédiaires
 
 # Charger la vidéo
 cap = cv2.VideoCapture(video_path)
@@ -34,8 +43,9 @@ increment = end_row / frame_count
 fourcc = cv2.VideoWriter_fourcc(*'XVID')  # Codec pour AVI
 out = cv2.VideoWriter(output_path, fourcc, fps, (width, height))
 
-# Variables pour le lissage
-smoothed_x, smoothed_y = width // 2, height // 2  # Initialisation au centre
+# Variables pour le suivi
+smoothed_current_x, smoothed_current_y = width // 2, height // 2  # Initialisation au centre
+smoothed_next_x, smoothed_next_y = width // 2, height // 2
 
 # Lire et traiter les frames
 while True:
@@ -43,36 +53,57 @@ while True:
     if not ret:
         break  # Fin de la vidéo
 
-    # Récupérer les coordonnées actuelles
-    if int(start_row) < end_row:
-        raw_x = float(eye_data.iloc[int(start_row), 0]) / 1920 * width
-        raw_y = float(eye_data.iloc[int(start_row), 1]) / 1080 * height
+    # Récupérer les coordonnées actuelles et suivantes
+    if int(start_row) < end_row - 1:
+        raw_current_x = float(eye_data.iloc[int(start_row), 0]) / x * width
+        raw_current_y = float(eye_data.iloc[int(start_row), 1]) / y * height
+        raw_next_x = float(eye_data.iloc[int(start_row) + 2, 0]) / x * width
+        raw_next_y = float(eye_data.iloc[int(start_row) + 2, 1]) / y * height
     else:
-        raw_x, raw_y = smoothed_x, smoothed_y  # Si données épuisées, rester sur la position précédente
+        raw_current_x, raw_current_y = smoothed_current_x, smoothed_current_y
+        raw_next_x, raw_next_y = smoothed_next_x, smoothed_next_y
 
     # Lissage des coordonnées
-    smoothed_x = int(alpha * raw_x + (1 - alpha) * smoothed_x)
-    smoothed_y = int(alpha * raw_y + (1 - alpha) * smoothed_y)
-    # smoothed_x = np.ones((5,5),np.float32)/25
-    # swoothed_y = np.ones((5,5),np.float32)/25
+    smoothed_current_x = int(0.8 * smoothed_current_x + 0.2 * raw_current_x)
+    smoothed_current_y = int(0.8 * smoothed_current_y + 0.2 * raw_current_y)
+    smoothed_next_x = int(0.8 * smoothed_next_x + 0.2 * raw_next_x)
+    smoothed_next_y = int(0.8 * smoothed_next_y + 0.2 * raw_next_y)
 
+    # Dessiner le point actuel
+    if 0 <= smoothed_current_x < width and 0 <= smoothed_current_y < height:
+         mask = frame.copy()
+         mask[:] = 0
 
-    # Dessiner le point seulement si les coordonnées sont valides
-    if 0 <= smoothed_x < width and 0 <= smoothed_y < height:
-        #cv2.circle(frame, (smoothed_x, smoothed_y), point_radius, point_color, point_thickness)
+         cv2.circle(mask, (smoothed_current_x, smoothed_current_y), current_point_radius, current_point_color, point_thickness)
 
-        # Créer un masque de la même taille que la vidéo
+         mask = cv2.GaussianBlur(mask, (21, 21), 0)
+
+         frame = cv2.addWeighted(frame, 1.0, mask, 0.5, 0)
+
+    # Dessiner le point suivant
+    if 0 <= smoothed_next_x < width and 0 <= smoothed_next_y < height:
         mask = frame.copy()
-        mask[:] = 0  # Remplir le masque avec du noir
+        mask[:] = 0
 
-        # Dessiner le point sur le masque
-        cv2.circle(mask, (smoothed_x, smoothed_y), point_radius, point_color, point_thickness)
+        cv2.circle(mask, (smoothed_next_x, smoothed_next_y), next_point_radius, next_point_color, point_thickness)
 
-        # Appliquer un filtre gaussien sur le masque
-        mask = cv2.GaussianBlur(mask, (21, 21), 0)  # Taille du noyau et écart type ajustables
+        mask = cv2.GaussianBlur(mask, (21, 21), 0)
 
-        # Ajouter le masque à la frame d'origine
-        frame = cv2.addWeighted(frame, 1.0, mask, 0.5, 0)  # Fusionner avec transparence
+        frame = cv2.addWeighted(frame, 1.0, mask, 0.5, 0)
+
+    # Dessiner les points intermédiaires
+    for i in range(1, num_path_points + 1):
+        interp_x = int(smoothed_current_x + i * (smoothed_next_x - smoothed_current_x) / (num_path_points + 1))
+        interp_y = int(smoothed_current_y + i * (smoothed_next_y - smoothed_current_y) / (num_path_points + 1))
+        if 0 <= interp_x < width and 0 <= interp_y < height:
+            mask = frame.copy()
+            mask[:] = 0
+
+            cv2.circle(mask, (interp_x, interp_y), path_point_radius, path_point_color, point_thickness)
+
+            mask = cv2.GaussianBlur(mask, (21, 21), 0)
+
+            frame = cv2.addWeighted(frame, 1.0, mask, 0.5, 0)
 
     # Écrire la frame dans la vidéo de sortie
     out.write(frame)
