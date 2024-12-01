@@ -1,0 +1,16 @@
+import numpy as np
+from pandas import DataFrame
+import seaborn as sns
+import matplotlib.pyplot as plt  # Nécessaire pour afficher la heatmap dans certains environnements
+
+# Définir les index et colonnes
+index = [i for i in range(20)]
+cols = [i for i in range(28)]
+
+# Créer une DataFrame remplie de zéros
+df = DataFrame(abs(np.random.randn(len(index),len(cols))), index=index, columns=cols)
+# Dessiner la heatmapindex
+sns.heatmap(df, annot=True, cbar=False, cmap="Blues")
+plt.show()
+
+print(df.iloc[1,19])

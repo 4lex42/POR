@@ -12,10 +12,14 @@ point_radius = 30  # Rayon du point
 point_thickness = 5  # -1 pour un cercle plein
 
 # Lissage des mouvements
-alpha = 0.25  # Facteur de pondération pour le lissage (0.0 = lissage extrême, 1.0 = pas de lissage)
+alpha = 0.22  # Facteur de pondération pour le lissage (0.0 = lissage extrême, 1.0 = pas de lissage)
 
 # Charger la vidéo
 cap = cv2.VideoCapture(video_path)
+
+# résolution écran sur lequel a été réalisé le POR
+resolution_x = 1600
+resolution_y = 1150
 
 # Propriétés de la vidéo
 height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
@@ -45,17 +49,14 @@ while True:
 
     # Récupérer les coordonnées actuelles
     if int(start_row) < end_row:
-        raw_x = float(eye_data.iloc[int(start_row), 0]) / 1600 * width
-        raw_y = float(eye_data.iloc[int(start_row), 1]) / 1150 * height
+        raw_x = float(eye_data.iloc[int(start_row), 0]) / resolution_x * width
+        raw_y = float(eye_data.iloc[int(start_row), 1]) / resolution_y * height
     else:
         raw_x, raw_y = smoothed_x, smoothed_y  # Si données épuisées, rester sur la position précédente
 
     # Lissage des coordonnées
     smoothed_x = int(alpha * raw_x + (1 - alpha) * smoothed_x)
     smoothed_y = int(alpha * raw_y + (1 - alpha) * smoothed_y)
-    # smoothed_x = np.ones((5,5),np.float32)/25
-    # swoothed_y = np.ones((5,5),np.float32)/25
-
 
     # Dessiner le point seulement si les coordonnées sont valides
     if 0 <= smoothed_x < width and 0 <= smoothed_y < height:
@@ -74,6 +75,11 @@ while True:
         # Ajouter le masque à la frame d'origine
         frame = cv2.addWeighted(frame, 1.0, mask, 0.5, 0)  # Fusionner avec transparence
 
+        # Afficher la frame
+        cv2.imshow("Video avec point rouge", frame)
+        # Quitter si 'q' est pressé
+        if cv2.waitKey(int(fps)) & 0xFF == ord('p'):
+            break
     # Écrire la frame dans la vidéo de sortie
     out.write(frame)
 
