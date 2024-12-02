@@ -3,6 +3,9 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 import numpy as np
 
+x = 1920
+y = 1080
+
 # Charger le fichier CSV avec le bon séparateur
 file_path = 'assets/DataPOR.csv'
 df = pd.read_csv(file_path, sep="\t")
@@ -24,8 +27,8 @@ x_bins = 50  # Nombre de bins pour l'axe X
 y_bins = 50  # Nombre de bins pour l'axe Y
 
 # Créer un histogramme 2D avec une plage explicite pour les axes
-x_range = (0, 1920)  # Plage pour l'axe X
-y_range = (0, 1080)  # Plage pour l'axe Y
+x_range = (0, x)  # Plage pour l'axe X
+y_range = (0, y)  # Plage pour l'axe Y
 heatmap, xedges, yedges = np.histogram2d(x_values, y_values, bins=[x_bins, y_bins], range=[x_range, y_range])
 
 # Transformer en DataFrame pour l'utiliser avec seaborn
@@ -41,7 +44,7 @@ plt.xlabel("Position X")
 plt.ylabel("Position Y")
 
 # Ajouter des ticks correspondant aux limites des bins
-plt.xticks(np.linspace(0, x_bins, num=6), labels=np.linspace(0, 1920, num=6, dtype=int))
-plt.yticks(np.linspace(0, y_bins, num=6), labels=np.linspace(0, 1080, num=6, dtype=int))
+plt.xticks(np.linspace(0, x_bins, num=6), labels=np.linspace(0, x, num=6, dtype=int))
+plt.yticks(np.linspace(0, y_bins, num=6), labels=np.linspace(0, y, num=6, dtype=int))
 
 plt.show()

@@ -12,7 +12,7 @@ point_radius = 30  # Rayon du point
 point_thickness = 5  # -1 pour un cercle plein
 
 # Lissage des mouvements
-alpha = 0.2  # Facteur de pondération pour le lissage (0.0 = aucune transition, 1.0 = rapide)
+alpha = 0.15  # Facteur de pondération pour le lissage (0.0 = aucune transition, 1.0 = rapide)
 
 x = 1600
 y = 1150
